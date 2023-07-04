@@ -11,7 +11,7 @@ class Genom():
         self.out_Nodes = [Node(i,type = "out") for i in range(n_Out)]
         self.hidden_Nodes = []
         self.connections = [Connection(self.in_Nodes[i],self.out_Nodes[j]) for i in range(n_In) for j in range(n_Out)]
-        self.n_nodes = n_Out
+        self.n_nodes = n_Out 
     
     #create/overrite the Genom with given params
     def create(self,in_Nodes, out_Nodes,hidden_Nodes,connections):
@@ -21,22 +21,30 @@ class Genom():
         self.connections = connections
         self.n_nodes = len(self.out_Nodes) + len(self.hidden_Nodes)
 
+    def contains_Node(self,node):
+        for n in self.out_Nodes:
+            if n.key == node.key:
+                return True
+        return False
+
     #forwardpass for the Genom
     def forward(self,x):
+
         if len(x) != len(self.in_Nodes):
             return
         
         #Queue structure to implement depth search
         queue = [(i,x[i+len(self.in_Nodes)]) for i in range(-len(self.in_Nodes),0,1)]
-        #print("Queue: " +str(queue))
         output = []
+
         while len(queue) != 0:
-            #print("Queue: " + str(queue))
+            
             element = queue.pop()
-            #print("Queue after pop: " + str(queue))
+            
             for c in self.connections:
                 if c.in_Node.key == element[0] and c.is_active: #only active connections
-                    if c.out_Node in self.out_Nodes:
+                    if self.contains_Node(c.out_Node):
+                       
                         output.append((c.out_Node.key,element[1]*c.weight))
                     else:
                         queue.append((c.out_Node.key,element[1]*c.weight))
@@ -50,6 +58,9 @@ class Genom():
                 dic.update([(key,value)])
 
         output = list(dic.items())
+        if output == []:
+            self.p_nodes()
+            self.p_connections()
         return output
     
     #Print the connections
@@ -120,11 +131,11 @@ class Genom():
             if np.random.rand(1) < 0.05:
                 new_Node = Node(self.n_nodes)
                 self.hidden_Nodes.append(new_Node)
-                new_connections.append(Connection(c.in_Node,new_Node, weight=1))
+                new_connections.append(Connection(c.in_Node,new_Node, weight=1) )
                 new_connections.append(Connection(new_Node,c.out_Node, weight = c.weight))
+                self.connections.remove(c)
                 self.n_nodes += 1
-                c.disable() 
-
+                
         self.connections += new_connections
 
         #adding new connections between input nodes and hidden nodes
@@ -142,10 +153,26 @@ class Genom():
                         except:
                             pass
 
-        #adding new connections between two hidden nodes
-        for hN1 in self.in_Nodes:
-            for hN2 in self.hidden_Nodes:
+        #adding new connections between input nodes and hidden nodes
+        for iN in self.in_Nodes:
+            for oN in self.out_Nodes:
                 if np.random.rand(1) < 0.01:
+                    new_connection = Connection(iN,oN)
+                    if not self.has_connection(new_connection):
+                        self.connections.append(new_connection)
+                        #if this change result into a cycle -> delete the node again
+                        try:
+                            G = self.create_Graph()
+                            nx.find_cycle(G)
+                            self.connections.remove(new_connection)
+                        except:
+                            pass
+
+
+        #adding new connections between two hidden nodes
+        for hN1 in self.hidden_Nodes:
+            for hN2 in self.hidden_Nodes:
+                if np.random.rand(1) < 0.01 and hN1.key != hN2.key:
                     new_connection = Connection(hN1,hN2)
                     if not self.has_connection(new_connection):
                         self.connections.append(new_connection)
@@ -158,8 +185,8 @@ class Genom():
                             pass
 
         #adding new connections between output nodes and hidden nodes          
-        for hN in self.in_Nodes:
-            for oN in self.hidden_Nodes:
+        for hN in self.hidden_Nodes:
+            for oN in self.out_Nodes:
                 if np.random.rand(1) < 0.01:
                     new_connection = Connection(hN,oN)
                     if not self.has_connection(new_connection):
@@ -171,10 +198,11 @@ class Genom():
                             self.connections.remove(new_connection)
                         except:
                             pass
+
         #double check
         try:
             G = self.create_Graph()
-            nx.find_cycle(G)
+            print(nx.find_cycle(G))
             print("Mistakes happend")
         except:
             pass
