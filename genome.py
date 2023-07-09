@@ -13,15 +13,7 @@ class Genom():
         self.connections = [Connection(self.in_Nodes[i],self.out_Nodes[j]) for i in range(n_In) for j in range(n_Out)]
         self.n_nodes = n_Out 
     
-    #create/overrite the Genom with given params
-    def create(self,in_Nodes, out_Nodes,hidden_Nodes,connections):
-        self.in_Nodes = in_Nodes,
-        self.out_Nodes = out_Nodes
-        self.hidden_Nodes = hidden_Nodes
-        self.connections = connections
-        self.n_nodes = len(self.out_Nodes) + len(self.hidden_Nodes)
-
-    def contains_Node(self,node):
+    def is_outNode(self,node):
         for n in self.out_Nodes:
             if n.key == node.key:
                 return True
@@ -43,7 +35,7 @@ class Genom():
             
             for c in self.connections:
                 if c.in_Node.key == element[0] and c.is_active: #only active connections
-                    if self.contains_Node(c.out_Node):
+                    if self.is_outNode(c.out_Node):
                        
                         output.append((c.out_Node.key,element[1]*c.weight))
                     else:
@@ -152,22 +144,6 @@ class Genom():
                             self.connections.remove(new_connection)
                         except:
                             pass
-
-        #adding new connections between input nodes and hidden nodes
-        for iN in self.in_Nodes:
-            for oN in self.out_Nodes:
-                if np.random.rand(1) < 0.01:
-                    new_connection = Connection(iN,oN)
-                    if not self.has_connection(new_connection):
-                        self.connections.append(new_connection)
-                        #if this change result into a cycle -> delete the node again
-                        try:
-                            G = self.create_Graph()
-                            nx.find_cycle(G)
-                            self.connections.remove(new_connection)
-                        except:
-                            pass
-
 
         #adding new connections between two hidden nodes
         for hN1 in self.hidden_Nodes:
