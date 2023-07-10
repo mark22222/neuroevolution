@@ -27,7 +27,7 @@ class Genom():
         
         #Queue structure to implement depth search
         queue = [(i,x[i+len(self.in_Nodes)]) for i in range(-len(self.in_Nodes),0,1)]
-        output = []
+        output = [(i,0) for i in range(len(self.out_Nodes))]
 
         while len(queue) != 0:
             
@@ -125,7 +125,7 @@ class Genom():
                 self.hidden_Nodes.append(new_Node)
                 new_connections.append(Connection(c.in_Node,new_Node, weight=1) )
                 new_connections.append(Connection(new_Node,c.out_Node, weight = c.weight))
-                self.connections.remove(c)
+                c.disable()
                 self.n_nodes += 1
                 
         self.connections += new_connections
@@ -219,3 +219,64 @@ class Node():
         print("Key: " + str(self.key),end=" ")
         print("Type: " + str(self.type),end=" ")
         print("Bias: " + str(self.bias))
+
+
+
+
+
+
+
+def same_connection(con1,con2):
+        return con1.in_Node.key == con2.in_Node.key and con1.out_Node.key == con2.out_Node.key
+
+def contains_connection(con,l_cons):
+    for c in l_cons:
+        if same_connection(c,con):
+            return True
+        
+    return False
+
+
+
+
+def crossover(genom1,genom2):
+
+        con1 = genom1.connections
+        con2 = genom2.connections
+
+        fit1 = np.random.rand(1)
+        fit2 = np.random.rand(1)
+
+
+        new_con = []
+        for c1 in con1:
+            for c2 in con2:
+                if same_connection(c1,c2):
+                    if c1.is_active == c2.is_active:
+                        if np.random.rand(1) < 0.5:
+                            new_con.append(c1)
+                        else:
+                            new_con.append(c2)
+                        break
+                    elif fit1 >= fit2:
+                        new_con.append(c1)
+                    else:
+                        new_con.append(c2)
+
+        if fit1 >= fit2:
+            for c1 in con1:
+                if not contains_connection(c1, new_con):
+                    new_con.append(c1)
+        else:
+            for c2 in con2:
+                if not contains_connection(c2, new_con):
+                    new_con.append(c2)
+
+        g = Genom(2,1)
+        g.in_Nodes = genom1.in_Nodes
+        g.out_Nodes = genom1.out_Nodes
+        g.hidden_Nodes = genom1.hidden_Nodes if fit1 > fit2 else genom2.hidden_Nodes
+        g.connections = new_con
+        g.visualize()
+
+        return g
