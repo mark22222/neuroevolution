@@ -110,7 +110,7 @@ class Genom():
         return False
 
     #mutates the genom
-    def mutate(self, alpha=0.1):
+    def mutate(self, prob=0.01, alpha=0.1):
 
         #mutate every weigth
         for c in self.connections:
@@ -129,7 +129,7 @@ class Genom():
         new_connections = []
         for c in self.connections:
             #probability 10% for ech connection
-            if np.random.rand(1) < 0.05:
+            if np.random.rand(1) < prob:
                 new_Node = Node(self.n_nodes)
                 self.hidden_Nodes.append(new_Node)
                 new_connections.append(Connection(c.in_Node,new_Node, weight=1) )
@@ -142,7 +142,7 @@ class Genom():
         #adding new connections between input nodes and hidden nodes
         for iN in self.in_Nodes:
             for hN in self.hidden_Nodes:
-                if np.random.rand(1) < 0.01:
+                if np.random.rand(1) < prob:
                     new_connection = Connection(iN,hN)
                     if not self.has_connection(new_connection):
                         self.connections.append(new_connection)
@@ -157,7 +157,7 @@ class Genom():
         #adding new connections between two hidden nodes
         for hN1 in self.hidden_Nodes:
             for hN2 in self.hidden_Nodes:
-                if np.random.rand(1) < 0.01 and hN1.key != hN2.key:
+                if np.random.rand(1) < prob and hN1.key != hN2.key:
                     new_connection = Connection(hN1,hN2)
                     if not self.has_connection(new_connection):
                         self.connections.append(new_connection)
@@ -172,7 +172,7 @@ class Genom():
         #adding new connections between output nodes and hidden nodes          
         for hN in self.hidden_Nodes:
             for oN in self.out_Nodes:
-                if np.random.rand(1) < 0.01:
+                if np.random.rand(1) < prob:
                     new_connection = Connection(hN,oN)
                     if not self.has_connection(new_connection):
                         self.connections.append(new_connection)
@@ -248,14 +248,13 @@ def contains_connection(con,l_cons):
 
 
 
-def crossover(genom1,genom2):
+def crossover(genom1,genom2, fit1=None, fit2=None):
 
         con1 = genom1.connections
         con2 = genom2.connections
 
-        fit1 = np.random.rand(1)
-        fit2 = np.random.rand(1)
-
+        fit1 = fit1 if fit1 is not None else np.random.rand(1)
+        fit2 = fit2 if fit2 is not None else np.random.rand(1)
 
         new_con = []
         for c1 in con1:
@@ -267,11 +266,16 @@ def crossover(genom1,genom2):
                         else:
                             new_con.append(c2)
                         break
-                    elif fit1 >= fit2:
-                        new_con.append(c1)
+                    elif c1.is_active:
+                        if np.random.rand(1) < 0.95:
+                            new_con.append(c1)
+                        else:
+                            new_con.append(c2)
                     else:
-                        new_con.append(c2)
-
+                        if np.random.rand(1) < 0.95:
+                            new_con.append(c2)
+                        else:
+                            new_con.append(c1)
         if fit1 >= fit2:
             for c1 in con1:
                 if not contains_connection(c1, new_con):
@@ -297,6 +301,6 @@ def crossover(genom1,genom2):
         g.hidden_Nodes = hidden_Nodes
         g.connections = new_con
         g.n_nodes = len(g.out_Nodes) + len(g.hidden_Nodes)
-        g.visualize()
+        #g.visualize()
 
         return g
