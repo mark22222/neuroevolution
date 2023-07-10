@@ -26,7 +26,7 @@ class Genom():
             return
         
         #Queue structure to implement depth search
-        queue = [(i,x[i+len(self.in_Nodes)]) for i in range(-len(self.in_Nodes),0,1)]
+        queue = [(i,x[i+len(self.in_Nodes)] + self.in_Nodes[i+len(self.in_Nodes)].bias) for i in range(-len(self.in_Nodes),0,1)]
         output = [(i,0) for i in range(len(self.out_Nodes))]
 
         while len(queue) != 0:
@@ -37,9 +37,9 @@ class Genom():
                 if c.in_Node.key == element[0] and c.is_active: #only active connections
                     if self.is_outNode(c.out_Node):
                        
-                        output.append((c.out_Node.key,element[1]*c.weight))
+                        output.append((c.out_Node.key,element[1]*c.weight + c.out_Node.bias))
                     else:
-                        queue.append((c.out_Node.key,element[1]*c.weight))
+                        queue.append((c.out_Node.key,element[1]*c.weight + c.out_Node.bias))
 
         #adding the tuple values together (for the same node)
         dic = dict()
@@ -115,6 +115,15 @@ class Genom():
         #mutate every weigth
         for c in self.connections:
             c.weight += alpha*np.random.normal(0,1)
+
+        for n in self.in_Nodes:
+            n.bias += alpha*np.random.normal(0,1)
+
+        for n in self.hidden_Nodes:
+            n.bias += alpha*np.random.normal(0,1)
+
+        for n in self.out_Nodes:
+            n.bias += alpha*np.random.normal(0,1)
 
         #adding a new Node
         new_connections = []
@@ -213,7 +222,7 @@ class Node():
     def __init__(self, key, type="hidden") -> None:
         self.key = key
         self.type = type
-        self.bias = 0
+        self.bias = np.random.normal(0,1)
     #print the node
     def p_node(self):
         print("Key: " + str(self.key),end=" ")
@@ -275,8 +284,19 @@ def crossover(genom1,genom2):
         g = Genom(2,1)
         g.in_Nodes = genom1.in_Nodes
         g.out_Nodes = genom1.out_Nodes
-        g.hidden_Nodes = genom1.hidden_Nodes if fit1 > fit2 else genom2.hidden_Nodes
+        hidden_Nodes = []
+        hidden_keys = []
+        for c in new_con:
+            if not c.in_Node.key in hidden_keys and c.in_Node.type == "hidden":
+                hidden_keys.append(c.in_Node.key)
+                hidden_Nodes.append(Node(c.in_Node.key))
+            if not c.out_Node.key in hidden_keys and c.out_Node.type == "hidden":
+                hidden_keys.append(c.out_Node.key)
+                hidden_Nodes.append(Node(c.out_Node.key))
+
+        g.hidden_Nodes = hidden_Nodes
         g.connections = new_con
+        g.n_nodes = len(g.out_Nodes) + len(g.hidden_Nodes)
         g.visualize()
 
         return g
