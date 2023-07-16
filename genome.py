@@ -12,7 +12,9 @@ class Genom():
         self.hidden_Nodes = []
         self.connections = [Connection(self.in_Nodes[i],self.out_Nodes[j]) for i in range(n_In) for j in range(n_Out)]
         self.n_nodes = n_Out 
+
     
+    #returns true if node is in out_Nodes
     def is_outNode(self,node):
         for n in self.out_Nodes:
             if n.key == node.key:
@@ -25,13 +27,13 @@ class Genom():
         if len(x) != len(self.in_Nodes):
             return
         
-        #Queue structure to implement depth search
-        queue = [(i,x[i+len(self.in_Nodes)] + self.in_Nodes[i+len(self.in_Nodes)].bias) for i in range(-len(self.in_Nodes),0,1)]
+        #stack structure to implement depth search
+        stack = [(i,x[i+len(self.in_Nodes)] + self.in_Nodes[i+len(self.in_Nodes)].bias) for i in range(-len(self.in_Nodes),0,1)]
         output = [(i,0) for i in range(len(self.out_Nodes))]
 
-        while len(queue) != 0:
+        while len(stack) != 0:
 
-            element = queue.pop()
+            element = stack.pop()
             
             for c in self.connections:
                 if c.in_Node.key == element[0] and c.is_active: #only active connections
@@ -39,7 +41,7 @@ class Genom():
                        
                         output.append((c.out_Node.key,element[1]*c.weight))
                     else:
-                        queue.append((c.out_Node.key,element[1]*c.weight + c.out_Node.bias))
+                        stack.append((c.out_Node.key,element[1]*c.weight + c.out_Node.bias))
 
         #adding the tuple values together (for the same node)
         dic = dict()
@@ -237,13 +239,12 @@ class Node():
 
 
 
-
-
-
-
+#checks if con1 == con2
 def same_connection(con1,con2):
         return con1.in_Node.key == con2.in_Node.key and con1.out_Node.key == con2.out_Node.key
 
+
+#checks if a list contains con
 def contains_connection(con,l_cons):
     for c in l_cons:
         if same_connection(c,con):
@@ -251,9 +252,7 @@ def contains_connection(con,l_cons):
         
     return False
 
-
-
-
+#crossover for two genoms
 def crossover(genom1,genom2, fit1=None, fit2=None):
 
         con1 = genom1.connections
