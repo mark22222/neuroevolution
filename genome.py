@@ -8,7 +8,7 @@ class Genom():
     #init a new Genom
     def __init__(self, n_In : int, n_Out : int) -> None:
         self.in_Nodes = [Node(i,type = "input") for i in range(-n_In,0)]
-        self.out_Nodes = [Node(i,type = "out") for i in range(n_Out)]
+        self.out_Nodes = [Node(i,type = "output") for i in range(n_Out)]
         self.hidden_Nodes = []
         self.connections = [Connection(self.in_Nodes[i],self.out_Nodes[j]) for i in range(n_In) for j in range(n_Out)]
         self.n_nodes = n_Out 
@@ -30,14 +30,14 @@ class Genom():
         output = [(i,0) for i in range(len(self.out_Nodes))]
 
         while len(queue) != 0:
-            
+
             element = queue.pop()
             
             for c in self.connections:
                 if c.in_Node.key == element[0] and c.is_active: #only active connections
                     if self.is_outNode(c.out_Node):
                        
-                        output.append((c.out_Node.key,element[1]*c.weight + c.out_Node.bias))
+                        output.append((c.out_Node.key,element[1]*c.weight))
                     else:
                         queue.append((c.out_Node.key,element[1]*c.weight + c.out_Node.bias))
 
@@ -50,9 +50,12 @@ class Genom():
                 dic.update([(key,value)])
 
         output = list(dic.items())
-        if output == []:
-            self.p_nodes()
-            self.p_connections()
+        
+        for i in range(len(output)):
+            tmp = output[i]
+            newTuple = (tmp[0],tmp[1]+self.in_Nodes[tmp[0]].bias)
+            output[i] = newTuple
+    
         return output
     
     #Print the connections
@@ -93,7 +96,7 @@ class Genom():
         return G
     
     #draw the graph
-    def visualize(self, labels = True, color = "blue"):
+    def visualize(self, labels = True, color = "green"):
         G = self.create_Graph()
         
         pos = nx.spring_layout(G)
@@ -110,26 +113,29 @@ class Genom():
         return False
 
     #mutates the genom
-    def mutate(self, prob=0.01, alpha=0.1):
+    def mutate(self, new_node_prob=0.03, new_con_prob = 0.05, alpha=0.1):
 
         #mutate every weigth
         for c in self.connections:
-            c.weight += alpha*np.random.normal(0,1)
+            if np.random.rand(1) < 0.8:
+                c.weight += alpha*np.random.normal(0,1)
 
         for n in self.in_Nodes:
-            n.bias += alpha*np.random.normal(0,1)
+            if np.random.rand(1) < 0.8:
+                n.bias += alpha*np.random.normal(0,1)
 
         for n in self.hidden_Nodes:
-            n.bias += alpha*np.random.normal(0,1)
+            if np.random.rand(1) < 0.8:
+                n.bias += alpha*np.random.normal(0,1)
 
         for n in self.out_Nodes:
-            n.bias += alpha*np.random.normal(0,1)
+            if np.random.rand(1) < 0.8:
+                n.bias += alpha*np.random.normal(0,1)
 
         #adding a new Node
         new_connections = []
         for c in self.connections:
-            #probability 10% for ech connection
-            if np.random.rand(1) < prob:
+            if np.random.rand(1) < new_node_prob:
                 new_Node = Node(self.n_nodes)
                 self.hidden_Nodes.append(new_Node)
                 new_connections.append(Connection(c.in_Node,new_Node, weight=1) )
@@ -142,7 +148,7 @@ class Genom():
         #adding new connections between input nodes and hidden nodes
         for iN in self.in_Nodes:
             for hN in self.hidden_Nodes:
-                if np.random.rand(1) < prob:
+                if np.random.rand(1) < new_con_prob:
                     new_connection = Connection(iN,hN)
                     if not self.has_connection(new_connection):
                         self.connections.append(new_connection)
@@ -157,7 +163,7 @@ class Genom():
         #adding new connections between two hidden nodes
         for hN1 in self.hidden_Nodes:
             for hN2 in self.hidden_Nodes:
-                if np.random.rand(1) < prob and hN1.key != hN2.key:
+                if np.random.rand(1) < new_con_prob and hN1.key != hN2.key:
                     new_connection = Connection(hN1,hN2)
                     if not self.has_connection(new_connection):
                         self.connections.append(new_connection)
@@ -172,7 +178,7 @@ class Genom():
         #adding new connections between output nodes and hidden nodes          
         for hN in self.hidden_Nodes:
             for oN in self.out_Nodes:
-                if np.random.rand(1) < prob:
+                if np.random.rand(1) < new_con_prob:
                     new_connection = Connection(hN,oN)
                     if not self.has_connection(new_connection):
                         self.connections.append(new_connection)
@@ -267,12 +273,12 @@ def crossover(genom1,genom2, fit1=None, fit2=None):
                             new_con.append(c2)
                         break
                     elif c1.is_active:
-                        if np.random.rand(1) < 0.95:
+                        if np.random.rand(1) < 0.75:
                             new_con.append(c1)
                         else:
                             new_con.append(c2)
                     else:
-                        if np.random.rand(1) < 0.95:
+                        if np.random.rand(1) < 0.75:
                             new_con.append(c2)
                         else:
                             new_con.append(c1)
@@ -304,3 +310,25 @@ def crossover(genom1,genom2, fit1=None, fit2=None):
         #g.visualize()
 
         return g
+
+#calc distance of two genoms
+def distance(genom1 : Genom, genom2 : Genom, c1=1, c3=0.4, N=1):
+    avg_weight = 0
+
+    for c in (genom1.connections + genom2.connections):
+        avg_weight += c.weight
+    avg_weight /= len(genom1.connections + genom2.connections)
+
+    excess = 0
+    contains = 0
+
+    for c in genom1.connections:
+        if not genom2.has_connection(c):
+            excess += 1
+        else:
+            contains += 1
+
+    excess += len(genom2.connections) -contains
+    
+    distance = c1*excess/N + c3*avg_weight
+    return distance
