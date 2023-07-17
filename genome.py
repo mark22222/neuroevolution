@@ -312,11 +312,14 @@ def crossover(genom1,genom2, fit1=None, fit2=None):
 
 #calc distance of two genoms
 def distance(genom1 : Genom, genom2 : Genom, c1=1, c3=0.4, N=1):
-    avg_weight = 0
-
-    for c in (genom1.connections + genom2.connections):
-        avg_weight += c.weight
-    avg_weight /= len(genom1.connections + genom2.connections)
+    sum = 0
+    count = 0
+    for con1 in genom1.connections:
+        for con2 in genom2.connections:
+            if same_connection(con1,con2):
+                count += 1
+                sum += abs(con1.weight - con2.weight)
+    avg_weight = sum / count
 
     excess = 0
     contains = 0
